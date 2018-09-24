@@ -1,5 +1,5 @@
 class MoviesController < ApplicationController
-
+  
   def movie_params
     params.require(:movie).permit(:title, :rating, :description, :release_date)
   end
@@ -11,15 +11,38 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @sort_choice = params[:sort]
+    @ratings = []
+    ratings_set = Movie.select(:rating).uniq
+    if params.has_key?(:ratings)
+      @ratings = params[:ratings];
+      @ratings = @ratings.keys
+      @sort_choice = flash[:sort]
+    elsif flash[:ratings]
+        @ratings = flash[:ratings]
+    else
+      ratings_set.each do |movie|
+        @ratings.push(movie.rating)
+      end
+    end
+    
+    @all_ratings = []
+    ratings_set.each do |movie|
+      @all_ratings.push(movie.rating)
+    end
+    
+    if params[:sort] == 'title' || params[:sort] == 'release_date'
+      @sort_choice = params[:sort]
+    end
     case @sort_choice
     when 'title'
-      @movies = Movie.order(:title)
+      @movies = Movie.where(rating: @ratings).order(:title)
     when 'release_date'
-      @movies = Movie.order(:release_date)
+      @movies = Movie.where(rating: @ratings).order(:release_date)
     else
-      @movies = Movie.all
+      @movies = Movie.where(rating: @ratings)
     end
+    flash[:sort] = @sort_choice
+    flash[:ratings] = @ratings
   end
 
   def new
