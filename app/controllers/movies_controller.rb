@@ -11,28 +11,43 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @ratings = []
     ratings_set = Movie.select(:rating).uniq
-    if params.has_key?(:ratings)
-      @ratings = params[:ratings];
-      @ratings = @ratings.keys
-      @sort_choice = flash[:sort]
-    elsif flash[:ratings]
-        @ratings = flash[:ratings]
-    else
-      ratings_set.each do |movie|
+    @ratings = []
+    if !params.has_key?(:ratings) || !params.has_key?(:sort)
+      if !params.has_key?(:ratings) && session[:ratings]
+        params[:ratings] = session[:ratings]
+        flash[:keys_check] = false
+      elsif !params.has_key?(:ratings)
+        ratings_set.each do |movie|
         @ratings.push(movie.rating)
+        
+        end
+        flash[:keys_check] = false
+        params[:ratings] = @ratings
+      else
+        flash[:keys_check] = true
       end
+      if !params.has_key?(:sort) && session[:sort]
+        params[:sort] = session[:sort]
+      elsif !params.has_key?(:sort)
+        params[:sort] = ""
+      end
+      flash.keep
+      redirect_to movies_path(:sort => params[:sort], :ratings => params[:ratings])
     end
+
+    @ratings = params[:ratings]
     
+    if @ratings.respond_to?('keys')
+      @ratings = @ratings.keys
+    end
+    flash[:keys_check] = false
+    @sort_choice = params[:sort]
     @all_ratings = []
     ratings_set.each do |movie|
       @all_ratings.push(movie.rating)
     end
-    
-    if params[:sort] == 'title' || params[:sort] == 'release_date'
-      @sort_choice = params[:sort]
-    end
+
     case @sort_choice
     when 'title'
       @movies = Movie.where(rating: @ratings).order(:title)
@@ -41,8 +56,8 @@ class MoviesController < ApplicationController
     else
       @movies = Movie.where(rating: @ratings)
     end
-    flash[:sort] = @sort_choice
-    flash[:ratings] = @ratings
+    session[:sort] = @sort_choice
+    session[:ratings] = @ratings
   end
 
   def new
